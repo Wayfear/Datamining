@@ -28,18 +28,6 @@ with open(file_name) as file:
             continue
         par = line.split(",")
 
-        # length = complex(line[2])
-        # width = complex(line[3])
-        #
-        # if length > max_length:
-        #     max_length = length
-        # if length < min_length:
-        #     min_length = length
-        # if width > max_width:
-        #     max_width = width
-        # if width < min_length:
-        #     min_width = width
-
         if par[0] == str(road_num):
             road.append([float(par[2]), float(par[3])])
         else:
@@ -48,7 +36,7 @@ with open(file_name) as file:
             road_num = int(par[0])
             print(road_num)
 
-roads.setdefault(road_num + 1, road)
+roads.setdefault(road_num, road)
 
 print("maxL = " + str(max_length) + "," + "minL = " + str(min_length) + "," +
       "maxW = " + str(max_width) + "," + "minW = " + str(min_width))
@@ -58,8 +46,9 @@ hashBarrel = {}
 
 
 def get_hash_index(list_par):
-    a = int(list_par[0]/20+1)*10000000+int(list_par[1]/20)
-    return a
+
+    return int(list_par[0]/20)*10000000+int(list_par[1]/20)
+
 
 for r in roads:
     for li in roads[r]:
@@ -71,17 +60,27 @@ print ("Barrel number = " + str(len(hashBarrel)))
 lsh = lshash.LSHash(8, len(hashBarrel))
 
 for r in roads:
-    initDict = copy.deepcopy(hashBarrel)
     for li in roads[r]:
         try:
-            initDict[get_hash_index(li)] += 1
-        finally:
-            a=0
-            # print("non-existent key")
 
-    lsh.index(initDict.values())
+            hashBarrel[get_hash_index(li)] = 1
+        except:
+            print("non-existent key")
 
-lsh.query()
+
+    lsh.index(hashBarrel.values())
+    for da in hashBarrel:
+        hashBarrel[da] = 0
+
+print ("finish")
+ans = lsh.query(hashBarrel.values())
+
+print ans[0]
+
+print ans[1]
+
+print ans[2]
+
 
 
 
