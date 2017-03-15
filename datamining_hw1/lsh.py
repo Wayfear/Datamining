@@ -46,7 +46,7 @@ with open(file_name) as file:
             roads.setdefault(road_num, road)
             road = []
             road_num = int(par[0])
-            print road_num
+            print(road_num)
 
 roads.setdefault(road_num + 1, road)
 
@@ -58,14 +58,15 @@ hashBarrel = {}
 
 
 def get_hash_index(list_par):
-    return int(list_par[0]/20)*int(list_par[1]/20)
+    a = int(list_par[0]/20+1)*10000000+int(list_par[1]/20)
+    return a
 
 for r in roads:
     for li in roads[r]:
         hashBarrel.setdefault(get_hash_index(li), 0)
-    print r
+    print(str(len(roads[r])))
 
-print ("Barrel number = ", len(hashBarrel))
+print ("Barrel number = " + str(len(hashBarrel)))
 
 lsh = lshash.LSHash(8, len(hashBarrel))
 
@@ -75,7 +76,8 @@ for r in roads:
         try:
             initDict[get_hash_index(li)] += 1
         finally:
-            print("non-existent key")
+            a=0
+            # print("non-existent key")
 
     lsh.index(initDict.values())
 
