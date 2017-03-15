@@ -1,14 +1,18 @@
 import utm
 import lshash
 import pandas as pd
+import json
+import copy
 
 file_name = "Traj_1000_SH_UTM"
 
 hash_bucket = {}
 road_data = {}
 vector_data = {}
-hash_size = 1
+hash_size = 10
 search_index = {15, 250, 480, 690, 900}
+json_data ={}
+
 
 def get_hash_index(x, y):
     x_range = (362800 - 346000) / 20
@@ -31,16 +35,25 @@ print len(hash_bucket)
 
 temp = 1
 temp_road = []
-
+temp_json = []
 for index, point in zip(tid, x_y):
     if index == temp:
         temp_road.append(point)
+        temp_json.append(utm.to_latlon(point[0], point[1], 51, 'R'))
     else:
         road_data.setdefault(temp,temp_road)
+        json_data.setdefault(temp,temp_json)
         temp_road=[]
+        temp_json=[]
         temp+=1
 
 road_data.setdefault(temp,temp_road)
+json_data.setdefault(temp, temp_json)
+
+
+
+
+
 
 lsh = lshash.LSHash(hash_size, len(hash_bucket))
 
@@ -52,7 +65,8 @@ for r in road_data:
     for d in hash_bucket:
         hash_bucket[d] = 0;
 
-
+with open('data.json', 'w') as f:
+    json.dump(json_data, f)
 
 for i in search_index:
     ans = lsh.query(vector_data[i])
