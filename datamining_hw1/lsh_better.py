@@ -63,10 +63,16 @@ for r in road_data:
     lsh.index(hash_bucket.values(), extra_data=r)
     vector_data.setdefault(r, hash_bucket.values())
     for d in hash_bucket:
-        hash_bucket[d] = 0;
+        hash_bucket[d] = 0
 
-with open('data.json', 'w') as f:
+with open('mapdata.json', 'w') as f:
     json.dump(json_data, f)
+
+with open('matrixdata.json', 'w') as f:
+    json.dump(vector_data, f)
+
+with open('roaddata.json', 'w') as f:
+    json.dump(road_data, f)
 
 for i in search_index:
     ans = lsh.query(vector_data[i])
