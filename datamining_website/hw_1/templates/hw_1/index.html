@@ -4,7 +4,7 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 	<title>添加弧线</title>
-	<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=ynEbpA27CHRkob74uGkVDtQfvn7WINAF"></script>
+	<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=zMz62hqs3RSGpHgH1y8Dnw1cDBpF35NO"></script>
 	<script type="text/javascript" src="http://api.map.baidu.com/library/CurveLine/1.5/src/CurveLine.min.js"></script>
     <script src="http://libs.baidu.com/jquery/1.9.0/jquery.min.js" type="text/javascript"></script>
 	<style type="text/css">
@@ -26,22 +26,44 @@
 
 <script type="text/javascript">
    var data = {{ road|safe }};
+   var convertor = new BMap.Convertor();
+
+   // 百度地图API功能
+   var map = new BMap.Map("container");
+   map.centerAndZoom(new BMap.Point(data[0][0][1],data[0][0][0]), 15);
+   map.enableScrollWheelZoom();
 
    function point(x) {
-	   return new BMap.Point(x[1],x[0])
+	   return new BMap.Point(x[1], x[0])
+   };
+
+
+
+
+	var callbackfun = function (redata) {
+	   var line = new BMap.Polyline(redata.points, {strokeColor: "blue", strokeWeight: 3, strokeOpacity: 0.5});
+            map.addOverlay(line);
+
+   };
+
+
+
+   for(var i in data) {
+
+	   var tmp = data[i].map(point)
+
+	   var arr = [];
+	   for (var i = 0; i < tmp.length; i++) {
+		   arr.push(tmp[i]);
+		   if (i % 9 === 0) {
+			   convertor.translate(arr, 1, 5, callbackfun);
+			   arr = [];
+			   arr.push(tmp[i]);
+		   }
+	   }
    }
-   var tmp = data.map(point)
 
-	// 百度地图API功能
-	var map = new BMap.Map("container");
-	map.centerAndZoom(new BMap.Point(, ), 6);
-	map.enableScrollWheelZoom();
-//	var beijingPosition=,
-//		hangzhouPosition=new BMap.Point(120.129721,30.314429),
-//		taiwanPosition=new BMap.Point(121.491121,25.127053);
-//	var points = [beijingPosition,hangzhouPosition, taiwanPosition];
-
-	var curve = new BMapLib.CurveLine(tmp, {strokeColor:"blue", strokeWeight:3, strokeOpacity:0.5}); //创建弧线对象
-	map.addOverlay(curve); //添加到地图中
-	curve.enableEditing(); //开启编辑功能
 </script>
+
+
+
