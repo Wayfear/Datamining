@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import decimal, simplejson
 
+
 class all_road(object):
     def __int__(self):
         self.all_road_data = None
@@ -109,7 +110,7 @@ def get_road_by_num(num):
 
 
 def index(request):
-    return render(request, "hw_1/index.html", {"road": allroad.all_road_data, "select_road": None})
+    return render(request, "hw_1/google_template.html", {"road": allroad.all_road_data})
 
 
 def get_road_by_lsh(request, line_num, bucket):

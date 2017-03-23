@@ -3,6 +3,7 @@ import lshash
 import pandas as pd
 import json
 import copy
+from CoordTransform import wgs84togcj02
 
 file_name = "Traj_1000_SH_UTM"
 
@@ -39,7 +40,9 @@ temp_json = []
 for index, point in zip(tid, x_y):
     if index == temp:
         temp_road.append(point)
-        temp_json.append(utm.to_latlon(point[0], point[1], 51, 'R'))
+        tp = utm.to_latlon(point[0], point[1], 51, 'R')
+        tp = wgs84togcj02(tp[1],tp[0])
+        temp_json.append([tp[1],tp[0]])
     else:
         road_data.setdefault(temp,temp_road)
         json_data.setdefault(temp,temp_json)
@@ -49,8 +52,6 @@ for index, point in zip(tid, x_y):
 
 road_data.setdefault(temp,temp_road)
 json_data.setdefault(temp, temp_json)
-
-
 
 
 
@@ -65,11 +66,12 @@ for r in road_data:
     for d in hash_bucket:
         hash_bucket[d] = 0
 
+
 with open('mapdata.json', 'w') as f:
     json.dump(json_data, f)
 
-with open('matrixdata.json', 'w') as f:
-    json.dump(vector_data, f)
+# with open('matrixdata.json', 'w') as f:
+#     json.dump(vector_data, f)
 
 with open('roaddata.json', 'w') as f:
     json.dump(road_data, f)
