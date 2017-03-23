@@ -1,21 +1,39 @@
 from django.shortcuts import render
 from models import map_date, utm_data
-from django.template import loader
 import json
 import lshash
-import logging
-# Create your views here.
-
-# def get_road_data(data):
+from sklearn.neighbors import NearestNeighbors
+import numpy as np
+import pandas as pd
 import decimal, simplejson
 
+class all_road(object):
+    def __int__(self):
+        self.all_road_data = None
 
-class my_lsh(object):
+    def load_data(self):
+        with open('mapdata.json', 'r') as f:
+            data = json.load(f)
+        roads = []
+        for re_index in data:
+            roads.append(data[re_index])
+        self.all_road_data = json.dumps(roads, cls=DecimalJSONEncoder)
+
+
+class DecimalJSONEncoder(simplejson.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, decimal.Decimal):
+            return str(o)
+        return super(DecimalJSONEncoder, self).default(o)
+
+class search_method(object):
     def __init__(self):
-        self.hash_bucket = {}
         self.vector_data = {}
         self.lsh = None
-        self.init = False
+        self.is_init = False
+        self.hash_size = 10
+        self.knn_res = None
+        self.bucket_length = 0
 
     @staticmethod
     def get_hash_index(x, y):
@@ -24,49 +42,62 @@ class my_lsh(object):
         hash_y = int((y - 3448600) / 20) + 1
         return x_range * hash_x + hash_y
 
-    def lsh_search(self, hash_size):
+    def init(self):
         with open('roaddata.json', 'r') as f:
             data = json.load(f)
+        file_name = "Traj_1000_SH_UTM"
+        file_data = pd.read_csv(file_name)
+        x_data = file_data['X'].values
+        y_data = file_data['Y'].values
+        tid = file_data['Tid'].values
+        hash_bucket = {}
 
-        for road_index in data:
-            for point in data[road_index]:
-                self.hash_bucket.setdefault(my_lsh.get_hash_index(point[0], point[1]), 0)
-
-        self.lsh = lshash.LSHash(hash_size, len(self.hash_bucket))
+        x_y = zip(x_data, y_data)
+        for x, y in x_y:
+            hash_bucket.setdefault(self.get_hash_index(x, y), 0)
+        self.bucket_length = len(hash_bucket)
+        self.lsh = lshash.LSHash(self.hash_size, len(hash_bucket))
+        npX = []
         for r in data:
             for p in data[r]:
-                self.hash_bucket[my_lsh.get_hash_index(p[0], p[1])] = 1
-            self.lsh.index(self.hash_bucket.values(), extra_data=r)
-            self.vector_data.setdefault(r, self.hash_bucket.values())
-            for d in self.hash_bucket:
-                self.hash_bucket[d] = 0
-        self.init = True
+                hash_bucket[search_method.get_hash_index(p[0], p[1])] = 1
+            self.lsh.index(hash_bucket.values(), extra_data=r)
+            self.vector_data.setdefault(r, hash_bucket.values())
+            npX.append(hash_bucket.values())
+            for d in hash_bucket:
+                hash_bucket[d] = 0
+        npX = np.array(npX)
+        nbrs = NearestNeighbors(n_neighbors=5, algorithm='ball_tree').fit(npX)
+        distances, self.knn_res = nbrs.kneighbors(npX)
+        self.is_init = True
 
-    def query(self, num):
+    def set_hash_size(self, size):
+        if self.hash_size == size:
+            return None
+        self.hash_size = size
+        self.lsh = lshash.LSHash(self.hash_size, len(self.bucket_length))
+        for da in self.vector_data:
+            self.lsh.index(self.vector_data[da], extra_data=da)
+
+    def lsh_query(self, num):
         ans = self.lsh.query(self.vector_data[num])
         da = []
         for r in ans:
             da.append(r[0][1])
         return da
 
-lsh_method = my_lsh()
-lsh_method.lsh_search(10)
+    def knn_query(self, n, index):
+        if n > 5:
+            n = 5
+        return self.knn_res[index][:n]
 
 
-def get_all_road():
-    data = map_date.objects.all()
-    data = list(data)
-    roads= {}
-    li_index = 1;
-    road = []
-    for r in data:
-        if li_index != r.line_id:
-            roads.setdefault(li_index,road)
-            road = []
-            li_index+=1
-        road.append([r.latitude, r.longitude])
-    roads.setdefault(li_index,road)
-    return  roads
+se_method = search_method()
+se_method.init()
+
+allroad = all_road()
+allroad.load_data()
+
 
 def get_road_by_num(num):
     data = map_date.objects.filter(line_id=num)
@@ -77,31 +108,29 @@ def get_road_by_num(num):
     return road
 
 
-class DecimalJSONEncoder(simplejson.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, decimal.Decimal):
-            return str(o)
-        return super(DecimalJSONEncoder, self).default(o)
-
-
 def index(request):
-    with open('mapdata.json', 'r') as f:
-        data = json.load(f)
-
-    roads = []
-    for re_index in data:
-        roads.append(data[re_index])
-    road = json.dumps(roads, cls=DecimalJSONEncoder)
-    return render(request, "hw_1/index.html", {"road": road})
+    return render(request, "hw_1/index.html", {"road": allroad.all_road_data, "select_road": None})
 
 
-def get_road(request, line_num, bucket):
-    ans = lsh_method.query(line_num)
+def get_road_by_lsh(request, line_num, bucket):
+    ans = se_method.lsh_query(line_num)
     roads=[]
     for i in ans:
         roads.append(get_road_by_num(int(i)))
+        print i
     temp = json.dumps(roads, cls=DecimalJSONEncoder)
-    return render(request, "hw_1/index.html", {"road": temp})
+    # return render(request, "hw_1/index.html", {"road": allroad.all_road_data, "select_road": temp})
+    return temp
+
+
+def get_road_by_knn(request, line_num, k):
+    ans = se_method.knn_query(int(line_num), int(k))
+    roads=[]
+    for i in ans:
+        roads.append(get_road_by_num(int(i)))
+        print i
+    temp = json.dumps(roads, cls=DecimalJSONEncoder)
+    return render(request, "hw_1/index.html", {"road": allroad.all_road_data, "select_road": temp})
 
 
 

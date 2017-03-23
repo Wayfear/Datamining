@@ -1,13 +1,22 @@
+
 <!DOCTYPE html>
-<html>
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
-	<title>添加弧线</title>
-	<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=zMz62hqs3RSGpHgH1y8Dnw1cDBpF35NO"></script>
-	<script type="text/javascript" src="http://api.map.baidu.com/library/CurveLine/1.5/src/CurveLine.min.js"></script>
-    <script src="http://libs.baidu.com/jquery/1.9.0/jquery.min.js" type="text/javascript"></script>
-	<style type="text/css">
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>地图展示</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=zMz62hqs3RSGpHgH1y8Dnw1cDBpF35NO"></script>
+	<script type="text/javascript" src="http://api.map.baidu.com/library/CurveLine/1.5/src/CurveLine.min.js"></script><script src="https://cdn.bootcss.com/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style type="text/css">
 		html,body{
 			width:100%;
 			height:100%;
@@ -16,54 +25,149 @@
 			font-family:"微软雅黑";
 		}
 	</style>
-</head>
-<body>
-	<div style="width:100%;height:100%;border:1px solid gray" id="container"></div>
-</body>
-</html>
+
+  </head>
+
+  <body>
+
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">路线展示</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <form class="navbar-form navbar-right">
+            <div class="form-group">
+              <input type="number" placeholder="Hash Size" class="form-control">
+            </div>
+            <div class="form-group">
+              <input type="number" placeholder="Line Number" class="form-control">
+            </div>
+            <button type="submit" class="btn btn-success" id="lsh">LSH</button>
+          </form>
+             <form class="navbar-form navbar-right">
+            <div class="form-group">
+              <input type="number" placeholder="K Number" class="form-control">
+            </div>
+            <div class="form-group">
+              <input type="number" placeholder="Line Number" class="form-control">
+            </div>
+            <button type="submit" class="btn btn-success" id="knn">KNN</button>
+          </form>
+        </div>
+      </div>
+    </nav>
+
+AIzaSyDIBQVZ2NHcdQHmP70PTKSXRjnZLJdvtio
+
+    <div class="container" style="width:100%;height:100%;border:1px solid gray" id="container">
+
+    </div> <!-- /container -->
+    <script type="text/javascript">
+
+         var data = {{ road|safe }};
+         var convertor = new BMap.Convertor();
+
+        var map = new BMap.Map("container");
+         var tilelayer = new BMap.TileLayer();
 
 
+        var center_point;
+        center_point = new BMap.Point(data[0][0][1],data[0][0][0]);
+        map.centerAndZoom(center_point, 15);
 
-<script type="text/javascript">
-   var data = {{ road|safe }};
-   var convertor = new BMap.Convertor();
+        map.enableScrollWheelZoom();
 
-   // 百度地图API功能
-   var map = new BMap.Map("container");
-   map.centerAndZoom(new BMap.Point(data[0][0][1],data[0][0][0]), 15);
-   map.enableScrollWheelZoom();
+        function point(x) {
+           return new BMap.Point(x[1], x[0])
+        };
 
-   function point(x) {
-	   return new BMap.Point(x[1], x[0])
-   };
+        var callbackfun = function (redata) {
+           var line = new BMap.Polyline(redata.points, {strokeColor: "blue", strokeWeight: 3, strokeOpacity: 0.5});
+                map.addOverlay(line);
 
+        };
 
-
-
-	var callbackfun = function (redata) {
-	   var line = new BMap.Polyline(redata.points, {strokeColor: "blue", strokeWeight: 3, strokeOpacity: 0.5});
+        var selectcallbackfun = function (redata) {
+            var line = new BMap.Polyline(redata.points, {strokeColor: "red", strokeWeight: 8, strokeOpacity: 0});
             map.addOverlay(line);
 
-   };
+        };
+
+       for(var k in data) {
+
+           var tmp = data[k].map(point)
+
+           var arr = [];
+           for (var i = 0; i < tmp.length; i++) {
+               arr.push(tmp[i]);
+               if (i % 9 === 0) {
+                   setTimeout(function () {
+
+                        setTimeout(function () {
+                            convertor.translate(arr, 1, 5, callbackfun)
+                        },1) ;
+                        arr = [];
+                        arr.push(tmp[i]);
+                   })
+
+               }
+           }
+       }
+
+        function success(text) {
+             for(var j in text) {
+                   var selecttmp = text[j].map(point)
+                   var selectarr = [];
+                   for (var t = 0; t < selecttmp.length; t++) {
+                       selectarr.push(selecttmp[t]);
+                       if (t % 9 === 0) {
+                           convertor.translate(selectarr, 1, 5, selectcallbackfun);
+                           selectarr = [];
+                           selectarr.push(selecttmp[t]);
+                       }
+                   }
+                }
+        }
+
+        function fail(code) {
+            alert('Error code: ' + code);
+        }
+
+        var request = new XMLHttpRequest(); // 新建XMLHttpRequest对象
+
+        request.onreadystatechange = function () { // 状态发生变化时，函数被回调
+            if (request.readyState === 4) { // 成功完成
+                // 判断响应结果:
+                if (request.status === 200) {
+                    // 成功，通过responseText拿到响应的文本:
+                    return success(request.responseText);
+                } else {
+                    // 失败，根据响应码判断失败原因:
+                    return fail(request.status);
+                }
+            } else {
+                // HTTP请求还在继续...
+            }
+        }
+
+        $('lsh').click(function () {
+            request.open('GET', '/get_road_by_lsh/10/15');
+            request.send();
+        });
 
 
 
-   for(var i in data) {
 
-	   var tmp = data[i].map(point)
 
-	   var arr = [];
-	   for (var i = 0; i < tmp.length; i++) {
-		   arr.push(tmp[i]);
-		   if (i % 9 === 0) {
-			   convertor.translate(arr, 1, 5, callbackfun);
-			   arr = [];
-			   arr.push(tmp[i]);
-		   }
-	   }
-   }
 
 </script>
 
-
-
+  </body>
+</html>
