@@ -20,34 +20,28 @@
   <body>
 
    <nav class="navbar navbar-inverse navbar-fixed-top">
-      <div class="container">
+      <div class="container-fluid">
         <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
             <span class="sr-only">Toggle navigation</span>
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">路线展示</a>
+          <a class="navbar-brand" href="/hw_1">路线展示</a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
-          <form class="navbar-form navbar-right" action="/get_road_by_lsh/">
+         <form class="navbar-form navbar-right" action="/hw_1/get_road" method='POST'>{% csrf_token %}
             <div class="form-group">
-              <input type="number" placeholder="Hash Size" class="form-control" name="hash_size">
+              <input type="number" min="10" max="15" placeholder="Size" class="form-control"  name="hash_size">
+            </div>
+              <div class="form-group">
+              <input type="number" placeholder="K" class="form-control" name="k"  min="0" max="5">
             </div>
             <div class="form-group">
-              <input type="number" placeholder="Line Number" class="form-control" name="line_number">
+              <input type="number" placeholder="Line ID" class="form-control" name="line_number"  min="1" max="1000">
             </div>
-            <button type="submit" class="btn btn-success" id="lsh">LSH</button>
-          </form>
-             <form class="navbar-form navbar-right" action="/get_road_by_knn/">
-            <div class="form-group">
-              <input type="number" placeholder="K Number" class="form-control" name="k">
-            </div>
-            <div class="form-group">
-              <input type="number" placeholder="Line Number" class="form-control" name="line_number">
-            </div>
-            <button type="submit" class="btn btn-success" id="knn">KNN</button>
+            <button type="submit" class="btn btn-success" id="lsh">QUERY</button>
           </form>
         </div>
       </div>
@@ -72,7 +66,7 @@
              var flightPath = new google.maps.Polyline({
                                 path: line,
                                 geodesic: true,
-                                strokeColor: '#00FF00',
+                                strokeColor: '#0000ff',
                                 strokeOpacity: 0.5,
                                 strokeWeight: 2
                               });

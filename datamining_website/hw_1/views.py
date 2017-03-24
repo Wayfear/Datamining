@@ -34,6 +34,7 @@ class search_method(object):
         self.is_init = False
         self.hash_size = 10
         self.knn_res = None
+        self.knn_dis = None
         self.bucket_length = 0
 
     @staticmethod
@@ -63,34 +64,36 @@ class search_method(object):
             for p in data[r]:
                 hash_bucket[search_method.get_hash_index(p[0], p[1])] = 1
             self.lsh.index(hash_bucket.values(), extra_data=r)
-            self.vector_data.setdefault(r, hash_bucket.values())
+            self.vector_data.setdefault(int(r), hash_bucket.values())
             npX.append(hash_bucket.values())
             for d in hash_bucket:
                 hash_bucket[d] = 0
         npX = np.array(npX)
-        nbrs = NearestNeighbors(n_neighbors=5, algorithm='ball_tree').fit(npX)
-        distances, self.knn_res = nbrs.kneighbors(npX)
+        nbrs = NearestNeighbors(n_neighbors=5, algorithm='auto').fit(npX)
+        self.knn_dis, self.knn_res = nbrs.kneighbors(npX)
         self.is_init = True
 
     def set_hash_size(self, size):
         if self.hash_size == size:
             return None
         self.hash_size = size
-        self.lsh = lshash.LSHash(self.hash_size, len(self.bucket_length))
+        self.lsh = lshash.LSHash(self.hash_size, self.bucket_length)
         for da in self.vector_data:
             self.lsh.index(self.vector_data[da], extra_data=da)
 
     def lsh_query(self, num):
         ans = self.lsh.query(self.vector_data[num])
         da = []
+        dis = []
         for r in ans:
-            da.append(r[0][1])
-        return da
+            da.append(int(r[0][1]))
+            dis.append(r[1])
+        return da, dis
 
     def knn_query(self, n, index):
         if n > 5:
             n = 5
-        return self.knn_res[index][:n]
+        return self.knn_res[index][:n], self.knn_dis[index][:n]
 
 
 se_method = search_method()
@@ -113,15 +116,26 @@ def index(request):
     return render(request, "hw_1/google_template.html", {"road": allroad.all_road_data})
 
 
-def get_road_by_lsh(request, line_num, bucket):
-    ans = se_method.lsh_query(line_num)
-    roads=[]
-    for i in ans:
-        roads.append(get_road_by_num(int(i)))
-        print i
-    temp = json.dumps(roads, cls=DecimalJSONEncoder)
-    # return render(request, "hw_1/index.html", {"road": allroad.all_road_data, "select_road": temp})
-    return temp
+def get_road(request):
+    se_method.set_hash_size(int(request.POST['hash_size']))
+    lsh_index, lsh_dis = se_method.lsh_query(int(request.POST['line_number']))
+    lsh_roads=[]
+    for i in lsh_index:
+        lsh_roads.append(get_road_by_num(i))
+    lsh_roads = json.dumps(lsh_roads, cls=DecimalJSONEncoder)
+    knn_index, knn_dis = se_method.knn_query(int(request.POST['k']), int(request.POST['line_number']))
+    knn_roads = []
+    for i in knn_index:
+        knn_roads.append(get_road_by_num(i))
+    knn_roads = json.dumps(knn_roads, cls=DecimalJSONEncoder)
+    lsh_index = json.dumps(lsh_index)
+    knn_index = json.dumps(knn_index.tolist())
+    lsh_dis = json.dumps(lsh_dis)
+    knn_dis = json.dumps(knn_dis.tolist())
+    return render(request, "hw_1/query.html", {"lsh_roads": lsh_roads, "knn_roads": knn_roads,
+                                               "lsh_index":lsh_index, "knn_index":knn_index,
+                                               "lsh_dis":lsh_dis, "knn_dis":knn_dis})
+
 
 
 def get_road_by_knn(request, line_num, k):

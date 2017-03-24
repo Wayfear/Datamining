@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Simple Map</title>
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+     <script src="https://cdn.bootcss.com/jquery/1.12.4/jquery.min.js"></script>
+      <link href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+        <script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        height: 100%;
+      }
+      .sidebar {
+  display: none;
+}
+@media (min-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 51px;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    display: block;
+    padding: 20px;
+    overflow-x: hidden;
+    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+    background-color: #f5f5f5;
+    border-right: 1px solid #eee;
+  }
+}
+    </style>
+  </head>
+  <body>
+
+  <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/hw_1">路线展示</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <form class="navbar-form navbar-right" action="/hw_1/get_road" method='POST'>{% csrf_token %}
+            <div class="form-group" >
+              <input type="number" min="10" max="15" placeholder="Size" class="form-control"  name="hash_size">
+            </div>
+              <div class="form-group">
+              <input type="number" placeholder="K" class="form-control" name="k"  min="0" max="5">
+            </div>
+            <div class="form-group">
+              <input type="number" placeholder="Line ID" class="form-control" name="line_number"  min="1" max="1000">
+            </div>
+            <button type="submit" class="btn btn-success" id="lsh">QUERY</button>
+          </form>
+          </form>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid" >
+    <div class="row">
+    <div id = "side" class="col-sm-3 col-md-2 sidebar">
+          <div class="panel panel-primary">
+            <div class="panel-body">
+                LSH
+            </div>
+            <div class="panel-footer">
+                <table class="table table-condensed" id = "lsh_table">
+                    <tr class="info"><td>路线ID</td><td>距离</td><td>颜色</td></tr>
+                </table>
+            </div>
+        </div>
+          <div class="panel panel-success">
+            <div class="panel-body">
+                KNN
+            </div>
+            <div class="panel-footer" id="knn">
+                <table class="table table-condensed">
+                    <tr class="success"><td>路线ID</td><td>距离</td><td>颜色</td></tr>
+                </table>
+        </div>
+        </div>
+    </div>
+     <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2"   >
+         <div id="map" style="width:1920px;height:1080px"></div>
+    </div>
+    </div>
+    </div>
+    <script>
+
+        var map;
+        function initMap() {
+          map = new google.maps.Map(document.getElementById('map'), {
+            center: {lat: 31.23, lng: 121.47 },
+            zoom: 13
+          });
+          var  lsh_data = {{ lsh_roads }};
+          var  knn_data = {{ knn_roads }};
+
+          var  lsh_index = {{ lsh_index }};
+          var  knn_index = {{ knn_index }};
+          var  lsh_dis = {{ lsh_dis }};
+          var  knn_dis = {{ knn_dis }};
+            
+            lsh_data.forEach(function (item,index,input) {
+                var line = [];
+                for(var po in item){
+                    line.push({lat: item[po][0], lng: item[po][1]});
+                }
+                if(index===0){
+                    var color = "#ff0000";
+                }
+                else {
+                    color = "#0000ff";
+                }
+                var flightPath = new google.maps.Polyline({
+                            path: line,
+                            geodesic: true,
+                            strokeColor: color,
+                            strokeOpacity: 0.5,
+                            strokeWeight: 5
+                          });
+                flightPath.setMap(map);
+
+            })
+
+            knn_data.forEach(function (item,index,input) {
+                var line = [];
+                for(var po in item){
+                    line.push({lat: item[po][0], lng: item[po][1]});
+                }
+                if(index===0){
+                    var color = "#ff0000";
+                }
+                else {
+                    color = "#00ff00";
+                }
+                var flightPath = new google.maps.Polyline({
+                            path: line,
+                            geodesic: true,
+                            strokeColor: color,
+                            strokeOpacity: 0.8,
+                            strokeWeight: 5
+                          });
+                flightPath.setMap(map);
+
+            })
+            var lsh = $("#lsh_table");
+            for (let i=0;i<lsh_index.length;i++) {
+                if(i===0){
+                    lsh.append('<tr class="active"><td>'+lsh_index[i]+'</td><td>'+lsh_dis[i]+'</td><td><span class="label label-danger">Red</span></td></tr>')
+                    continue;
+                }
+                if(i%2===0){
+                    lsh.append('<tr class="active"><td>'+lsh_index[i]+'</td><td>'+lsh_dis[i]+'</td><td><span class="label label-info">Blue</span></td></tr>')
+                }
+                else
+                {
+                    lsh.append('<tr class="info"><td>'+lsh_index[i]+'</td><td>'+lsh_dis[i]+'</td><td><span class="label label-info">Blue</span></td></tr>')
+                }
+
+            }
+             var knn = $("#knn table");
+            for (let i=0;i<knn_index.length;i++) {
+                  if(i===0){
+                      knn.append('<tr class="active"><td>'+knn_index[i]+'</td><td>'+ knn_dis[i].toFixed(2)+'</td><td><span class="label label-danger">Red</span></td></tr>')
+                      continue;
+                }
+                if(i%2===0){
+                    knn.append('<tr class="active"><td>'+knn_index[i]+'</td><td>'+ knn_dis[i].toFixed(2)+'</td><td><span class="label label-success">Green</span></td></tr>')
+                }
+                else
+                {
+                    knn.append('<tr class="success"><td>'+knn_index[i]+'</td><td>'+knn_dis[i].toFixed(2)+'</td><td><span class="label label-success">Green</span></td></tr>')
+                }
+
+            }
+
+
+        }
+
+
+
+    </script>
+
+    <script src="https://maps.google.cn/maps/api/js?key=AIzaSyDIBQVZ2NHcdQHmP70PTKSXRjnZLJdvtio&callback=initMap"
+        async defer></script>
+  </body>
+</html>
